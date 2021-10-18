@@ -1,35 +1,78 @@
 const { response, request } = require('express');
+const User = require('../models/user');
+const bcryptjs = require('bcryptjs');
+
 
 const getUsers = (req = request, res = response) => {
-    const { nombre = "Jhon Doe", key = "12354" } = req.query;
+
+    const { limit = 5, from = 0 } = req.query;
+    const query = { estado: true };
+
+    const [total, usuarios] = await Promise.all([
+        User.count(query),
+        User.find(query).skip(Number(from)).limit(Number(limit))
+    ])
+
+
     res.json({
-        msg: 'Hello World',
-        nombre, key
+        total,
+        usuarios
     })
 }
 
-const putUsers = (req = request, res = response) => {
+const postUsers = async (req, res) => {
 
-    const id = req.params.id;
+    const { nombre, email, password, rol } = req.body;
+
+    const user = new User({ nombre, email, password, rol });
+    const salt = bcryptjs.genSaltSync();
+    User.password = bcryptjs.hashSync(password, salt)
+    validEmail
+
     res.json({
-        msg: `Change World - ${id}`
+        user
+    })
+
+    await user.save();
+
+
+}
+
+const putUsers = async (req = request, res = response) => {
+
+    const { id } = req.params;
+
+    const { _id, password, google, correo, ...data } = req.body;
+
+
+    if (password) {
+        const salt = bcryptjs.genSaltSync();
+        data.password = bcryptjs.hashSync(password, salt)
+    }
+
+    const user = await User.findByIdAndUpdate(id, data);
+
+    res.json({
+        user
     });
 
 }
 
-const postUsers = (req, res) => {
-    const { nombre, edad } = req.body;
+const patchUsers = async (req = request, res = response) => {
+
+    const id = req.params.id;
+
+    /* Borrado en fisico */
+    // const user = await User.findOneAndDelete(id);
+
+    /* Borrado logico */
+    const user = await User.findByIdAndUpdate(id, { state: false });
+
     res.json({
-        msg: `Insert World - ${nombre}, ${edad} años`,
+        user
     })
 }
 
-const patchUsers = (req = request, res = response) => {
-    const id = req.params.id;
-    res.json({
-        msg: `Delete World - ${id}`
-    })
-}
 
 module.exports = {
     getUsers,
